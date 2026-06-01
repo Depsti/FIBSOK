@@ -155,7 +155,7 @@ function caseCard(c,db){
     <div class="meta">${badge(c.priority)}<span class="tag">Status: ${esc(c.status||'-')}</span><span class="tag">Einträge: ${entriesCount}</span></div>
   </a>`;
 }
-async function renderIndex(){header();const db=await load();const root=document.querySelector('#app');const stats={cases:db.cases.length,entries:db.entries.length,kritisch:db.cases.filter(c=>c.priority==='Kritisch').length};root.innerHTML=`<section class="hero"><div><span class="kicker">Classified Case Management</span><h1>AKTENPORTAL</h1><p class="sub">Kategorien auswählen, Akten anlegen, Prioritäten vergeben und direkt zu jeder Akte einzelne Ermittlungs- und Beweiseinträge dokumentieren.</p></div></section><div class="stats"><div class="panel stat"><strong>${stats.cases}</strong><span>Akten</span></div><div class="panel stat"><strong>${stats.entries}</strong><span>Einträge</span></div><div class="panel stat"><strong>${stats.kritisch}</strong><span>Kritisch</span></div></div><div class="section-title"><div><h2>Kategorien</h2><p class="sub">Wähle zuerst eine Kategorie. Danach siehst du alle Akten innerhalb dieser Kategorie.</p></div><button class="btn primary" onclick="openCaseModal()">+ Neue Akte</button></div><div class="grid">${Object.entries(CATEGORIES).map(([key,c])=>{const n=db.cases.filter(x=>x.category===key).length;return `<a class="card corner category-card" href="category.html?cat=${key}"><div><div class="icon">${c.icon}</div><h3>${c.title}</h3><p class="sub" style="font-size:14px;margin-top:10px">${c.desc}</p></div><div class="meta"><span class="tag">${n} Akten</span><span class="tag">Öffnen →</span></div></a>`}).join('')}</div><div class="section-title"><div><h2>Hochprioritäre Akten</h2></div></div><div class="grid">${sortByPriority(db.cases).slice(0,4).map(c=>caseCard(c,db)).join('')||'<div class="empty">Noch keine Akten vorhanden.</div>'}</div>`;modalHtml();footer()}
+async function renderIndex(){playIntro();header();const db=await load();const root=document.querySelector('#app');const stats={cases:db.cases.length,entries:db.entries.length,kritisch:db.cases.filter(c=>c.priority==='Kritisch').length};root.innerHTML=`<section class="hero"><div><span class="kicker">Classified Case Management</span><h1>AKTENPORTAL</h1><p class="sub">Kategorien auswählen, Akten anlegen, Prioritäten vergeben und direkt zu jeder Akte einzelne Ermittlungs- und Beweiseinträge dokumentieren.</p></div></section><div class="stats"><div class="panel stat"><strong>${stats.cases}</strong><span>Akten</span></div><div class="panel stat"><strong>${stats.entries}</strong><span>Einträge</span></div><div class="panel stat"><strong>${stats.kritisch}</strong><span>Kritisch</span></div></div><div class="section-title"><div><h2>Kategorien</h2><p class="sub">Wähle zuerst eine Kategorie. Danach siehst du alle Akten innerhalb dieser Kategorie.</p></div><button class="btn primary" onclick="openCaseModal()">+ Neue Akte</button></div><div class="grid">${Object.entries(CATEGORIES).map(([key,c])=>{const n=db.cases.filter(x=>x.category===key).length;return `<a class="card corner category-card" href="category.html?cat=${key}"><div><div class="icon">${c.icon}</div><h3>${c.title}</h3><p class="sub" style="font-size:14px;margin-top:10px">${c.desc}</p></div><div class="meta"><span class="tag">${n} Akten</span><span class="tag">Öffnen →</span></div></a>`}).join('')}</div><div class="section-title"><div><h2>Hochprioritäre Akten</h2></div></div><div class="grid">${sortByPriority(db.cases).slice(0,4).map(c=>caseCard(c,db)).join('')||'<div class="empty">Noch keine Akten vorhanden.</div>'}</div>`;modalHtml();footer()}
 async function renderCategory(){header();const cat=q('cat')||'familien';const cfg=CATEGORIES[cat]||CATEGORIES.sonstige;const db=await load();const cases=getCases(db,cat);document.querySelector('#app').innerHTML=`<div class="container"><div class="breadcrumb"><a href="index.html">Kategorien</a><span>/</span><span>${esc(cfg.title)}</span></div><section class="hero" style="min-height:180px"><div><span class="kicker">Kategorie</span><h1>${esc(cfg.title)}</h1><p class="sub">${esc(cfg.desc)}</p></div></section><div class="section-title"><div><h2>Akten in ${esc(cfg.title)}</h2><p class="sub">Klicke auf eine Akte, um Stammdaten und einzelne Einträge zu öffnen.</p></div><button class="btn primary" onclick="openCaseModal('${cat}')">+ Akte anlegen</button></div><div class="toolbar"><input id="search" class="input" placeholder="Akten durchsuchen..." oninput="filterCards()"><select id="prioFilter" onchange="filterCards()"><option value="">Alle Prioritäten</option>${PRIORITIES.map(p=>`<option>${p}</option>`).join('')}</select><button class="btn" onclick="resetFilters()">Zurücksetzen</button></div><div id="caseGrid" class="grid">${sortByPriority(cases).map(c=>caseCard(c,db)).join('')||'<div class="empty">In dieser Kategorie existieren noch keine Akten.</div>'}</div></div>`;modalHtml();footer()}
 function filterCards(){const term=document.querySelector('#search')?.value.toLowerCase()||'';const pr=document.querySelector('#prioFilter')?.value||'';document.querySelectorAll('#caseGrid .card').forEach(card=>{const text=card.innerText.toLowerCase();const show=(!term||text.includes(term))&&(!pr||text.includes(pr.toLowerCase()));card.classList.toggle('hidden',!show)})}
 function resetFilters(){document.querySelector('#search').value='';document.querySelector('#prioFilter').value='';filterCards()}
@@ -284,4 +284,58 @@ function saveSupabaseConfig(ev) {
     localStorage.removeItem(SUPABASE_KEY_KEY);
   }
   location.reload();
+}
+
+/* Intro Security Handshake effect */
+function playIntro() {
+  if (sessionStorage.getItem('fib_intro_played')) return;
+  document.body.insertAdjacentHTML('afterbegin', `
+    <div id="intro-overlay" class="intro-overlay">
+      <div class="intro-content">
+        <div class="intro-logo">FIB SECURE PROTOCOL</div>
+        <div class="intro-terminal" id="intro-terminal"></div>
+        <button class="intro-skip" id="intro-skip-btn" onclick="skipIntro()">[ VERBINDUNG ABBRECHEN ]</button>
+      </div>
+    </div>
+  `);
+  const terminal = document.getElementById('intro-terminal');
+  const lines = [
+    { text: "> SOK INTRUSION DETECTED: INITIALISIERUNG SICHERHEITSPROTOKOLL...", delay: 250 },
+    { text: "> ERSTELLE ENCRYPTED TUNNEL ZU SOK-DATACENTER...", delay: 650 },
+    { text: "> [OK] SCHNITTSTELLE AKTIV (AES-256 KRYPTOGRAFIE)", delay: 350, type: 'gold' },
+    { text: "> ANALYSIERE CLOUD-DATENBANK STATUS...", delay: 550 },
+    { text: supabaseClient ? "> [ONLINE] SUPABASE ONLINE-BACKEND VERBUNDEN" : "> [LOKAL] SUPABASE INAKTIV. FALLBACK AUF LOKALE DATENBANK-SCHICHT.", delay: 500, type: supabaseClient ? 'gold' : 'red' },
+    { text: "> PRÜFE DATEIVERZEICHNIS INTEGRITÄT...", delay: 400 },
+    { text: "> [OK] SECURIS SHIELD SYSTEM V4 AKTIVIERTE SCHUTZMAUER", delay: 200, type: 'gold' },
+    { text: "> ENTSCHLÜSSELE AKTEN-DOSSIERS...", delay: 600 },
+    { text: "> ZUGRIFF GEWÄHRT. WILLKOMMEN AGENT.", delay: 400, type: 'gold' }
+  ];
+  let idx = 0;
+  function printLine() {
+    if (!document.getElementById('intro-overlay')) return;
+    if (idx >= lines.length) {
+      const btn = document.getElementById('intro-skip-btn');
+      if (btn) btn.textContent = '[ DATENBANK BETRETEN ]';
+      return;
+    }
+    const line = lines[idx];
+    const div = document.createElement('div');
+    div.className = `line ${line.type || ''}`;
+    div.textContent = line.text;
+    terminal.appendChild(div);
+    terminal.scrollTop = terminal.scrollHeight;
+    idx++;
+    setTimeout(printLine, line.delay);
+  }
+  printLine();
+}
+function skipIntro() {
+  const overlay = document.getElementById('intro-overlay');
+  if (overlay) {
+    overlay.classList.add('fade-out');
+    setTimeout(() => {
+      overlay.remove();
+    }, 600);
+  }
+  sessionStorage.setItem('fib_intro_played', 'true');
 }
